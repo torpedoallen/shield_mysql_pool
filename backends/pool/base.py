@@ -1,23 +1,17 @@
-# -*- coding: utf-8 -*-
-"""The top-level package for ``django-mysqlpool``."""
-# These imports make 2 act like 3, making it easier on us to switch to PyPy or
-# some other VM if we need to for performance reasons.
-from __future__ import (absolute_import, print_function, unicode_literals,
-                        division)
+# coding=utf8
 
-# Make ``Foo()`` work the same in Python 2 as it does in Python 3.
 __metaclass__ = type
 
 
 import os
-
 
 from django.conf import settings
 from django.contrib.gis.db.backends.mysql import base
 from django.core.exceptions import ImproperlyConfigured
 
 try:
-    import sqlalchemy.pool as pool
+    import pool as local_pool
+    import sqlalchemy.pool as sa_pool
 except ImportError as e:
     raise ImproperlyConfigured("Error loading SQLAlchemy module: %s" % e)
 
@@ -88,18 +82,16 @@ def get_pool():
     """Create one and only one pool using the configured settings."""
     global MYSQLPOOL
     if MYSQLPOOL is None:
-        backend_name = getattr(settings, 'MYSQLPOOL_BACKEND', DEFAULT_BACKEND)
-        #backend = getattr(pool, backend_name)
-        from pool.pool import QueuePool
-        backend = QueuePool
-        kwargs = getattr(settings, 'MYSQLPOOL_ARGUMENTS', {})
+        backend_name = getattr(settings, 'SHIELD_MYSQL_POOL_BACKEND', DEFAULT_BACKEND)
+        backend = getattr(local_pool, backend_name)
+        kwargs = getattr(settings, 'SHIELD_MYSQL_POOL_ARGUMENTS', {})
         kwargs.setdefault('poolclass', backend)
         kwargs.setdefault('recycle', DEFAULT_POOL_TIMEOUT)
-        MYSQLPOOL = pool.manage(OldDatabase, **kwargs)
+        MYSQLPOOL = sa_pool.manage(OldDatabase, **kwargs)
         setattr(MYSQLPOOL, '_pid', os.getpid())
 
     if getattr(MYSQLPOOL, '_pid', None) != os.getpid():
-        pool.clear_managers()
+        sa_pool.clear_managers()
     return MYSQLPOOL
 
 
